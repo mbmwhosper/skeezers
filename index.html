@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="description" content="Games collected from the repositories behind Skeezers.">
+  <title>Skeezers — game library</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./"><span class="brand-mark">S</span><span>Skeezers</span></a>
+    <span id="summary">Loading games…</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">REPOSITORY-BACKED GAME LIBRARY</p>
+      <h1>Pick a game.</h1>
+      <p>Games and catalogs from the projects supplied for Skeezers.</p>
+    </section>
+
+    <section class="controls" aria-label="Game filters">
+      <label class="search">
+        <span class="sr-only">Search games</span>
+        <input id="search" type="search" placeholder="Search games, tags, or source" autocomplete="off">
+      </label>
+      <div id="source-filters" class="source-filters" aria-label="Filter by source"></div>
+    </section>
+
+    <section class="library" aria-labelledby="library-title">
+      <div class="library-heading">
+        <h2 id="library-title">Games</h2>
+        <span id="game-count"></span>
+      </div>
+      <div id="game-grid" class="game-grid" aria-live="polite"></div>
+      <p id="empty-state" class="empty" hidden>No games match those filters.</p>
+      <button id="show-more" class="show-more" type="button" hidden>Show more games</button>
+    </section>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span> Skeezers</span>
+    <span>Source projects are identified on every card. <a href="third-party.html">Third-party notices</a></span>
+  </footer>
+
+  <dialog id="player">
+    <div class="player-shell">
+      <header class="player-header">
+        <div><p id="player-source"></p><h2 id="player-title"></h2></div>
+        <div class="player-actions">
+          <a id="open-direct" class="action-button" target="_blank" rel="noopener">Open directly</a>
+          <button id="fullscreen" type="button">Fullscreen</button>
+          <button id="close-player" type="button">Close</button>
+        </div>
+      </header>
+      <iframe id="game-frame" title="Game" sandbox="allow-scripts allow-forms allow-modals allow-pointer-lock allow-popups allow-downloads" allow="fullscreen; autoplay; gamepad" allowfullscreen></iframe>
+    </div>
+  </dialog>
+
+  <template id="card-template">
+    <article class="game-card">
+      <button class="game-launch" type="button">
+        <span class="card-art"><img alt="" loading="lazy"><span class="fallback" aria-hidden="true"></span></span>
+        <span class="card-body">
+          <span class="source"></span>
+          <strong class="title"></strong>
+          <span class="category"></span>
+        </span>
+      </button>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
