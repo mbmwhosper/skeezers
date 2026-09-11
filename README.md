@@ -5,7 +5,6 @@ A clean game launcher built from the repositories authorized for `skeezers.org`.
 ## Included sources
 
 - `gogoat35/gogoat35.github.io`: locally copied game pages
-- `MercuryWorkshop/terraria-wasm`: locally hosted release build
 - `UseInterstellar/Interstellar-Assets`: game catalog and icons
 - `Radon-Games/Radon-Games`: game metadata and official CDN launch URLs
 - `leereilly/games`: playable browser-game links from its curated open-source list
@@ -49,7 +48,7 @@ python3 scripts/build_cloudflare.py
 
 Configure Cloudflare Pages to use `python3 scripts/build_cloudflare.py` as the build command and `dist-cloudflare` as the output directory.
 
-The public bundle includes the gogoat35 pages under the redistribution permission confirmed by the Skeezers operator. Terraria's WebAssembly runtime is about 95 MiB, above Cloudflare Pages' 25 MiB per-asset limit, so Terraria remains available only in the local development copy. Its exclusion is technical rather than a permissions assumption.
+The public bundle includes the gogoat35 pages under the redistribution permission confirmed by the Skeezers operator.
 
 The included `_headers` file applies a strict content security policy to the launcher while leaving the self-contained game pages free to run their inline game code.
 

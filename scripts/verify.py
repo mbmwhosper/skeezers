@@ -45,7 +45,7 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def verify_catalog(root: Path, expected_total: int, terraria_expected: bool) -> list[dict]:
+def verify_catalog(root: Path, expected_total: int) -> list[dict]:
     games = json.loads((root / "catalog.json").read_text())
     require(len(games) == expected_total, f"{root.name}: expected {expected_total} games")
     require(len({game["id"] for game in games}) == len(games), f"{root.name}: duplicate IDs")
@@ -64,8 +64,6 @@ def verify_catalog(root: Path, expected_total: int, terraria_expected: bool) -> 
             image = urlsplit(game["image"])
             require(image.scheme.lower() in {"", "http", "https"}, f"unsafe image URL in {game['id']}")
         require(not game["description"].startswith("* ["), f"raw markdown description in {game['id']}")
-    has_terraria = any(game["id"] == "terraria-wasm" for game in games)
-    require(has_terraria is terraria_expected, f"{root.name}: unexpected Terraria state")
     return games
 
 
@@ -94,16 +92,15 @@ def main() -> None:
     subprocess.run(["python3", "scripts/build_catalog.py"], cwd=SITE_ROOT, check=True)
     subprocess.run(["python3", "scripts/build_cloudflare.py"], cwd=SITE_ROOT, check=True)
 
-    source_games = verify_catalog(SITE_ROOT, expected_total=803, terraria_expected=True)
-    dist_games = verify_catalog(DIST_ROOT, expected_total=802, terraria_expected=False)
-    require(sum(game["local"] for game in source_games) == 58, "source local-game count")
+    source_games = verify_catalog(SITE_ROOT, expected_total=802)
+    dist_games = verify_catalog(DIST_ROOT, expected_total=802)
+    require(sum(game["local"] for game in source_games) == 57, "source local-game count")
     require(sum(game["local"] for game in dist_games) == 57, "dist local-game count")
 
     files = [path for path in DIST_ROOT.rglob("*") if path.is_file()]
     require(bool(files), "Cloudflare bundle is empty")
     largest = max(path.stat().st_size for path in files)
     require(largest <= MAX_CLOUDFLARE_ASSET_BYTES, "Cloudflare asset exceeds 25 MiB")
-    require(not (DIST_ROOT / "games" / "terraria").exists(), "Terraria leaked into Cloudflare bundle")
     require((DIST_ROOT / "games" / "gogoat").is_dir(), "authorized gogoat files missing")
     require((DIST_ROOT / "third_party" / "licenses" / "INTERSTELLAR-ASSETS-GPL-3.0.txt").is_file(), "Interstellar license missing")
     require((DIST_ROOT / "third_party" / "licenses" / "RADON-GAMES-AGPL-3.0.txt").is_file(), "Radon license missing")

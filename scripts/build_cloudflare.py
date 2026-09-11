@@ -34,7 +34,6 @@ def main() -> None:
     shutil.copytree(SITE_ROOT / "third_party", OUTPUT / "third_party")
 
     catalog = json.loads((SITE_ROOT / "catalog.json").read_text())
-    catalog = [game for game in catalog if game["id"] != "terraria-wasm"]
     (OUTPUT / "catalog.json").write_text(
         json.dumps(catalog, indent=2, ensure_ascii=False) + "\n"
     )
@@ -52,7 +51,6 @@ def main() -> None:
                 "files": len(files),
                 "games": len(catalog),
                 "largest_asset_bytes": max(path.stat().st_size for path in files),
-                "terraria_included": False,
                 "authorized_gogoat_games_included": True,
             }
         )

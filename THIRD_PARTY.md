@@ -9,6 +9,5 @@ The top-level MIT license applies only to the original Skeezers launcher and bui
 | Games on GitHub list | `leereilly/games` | Used as source metadata only. Each linked game retains its own license. |
 | NettleWeb | `nettleweb/nettleweb` | Linked externally; no NettleWeb code is copied into the public bundle. |
 | gogoat35 game pages | `gogoat35/gogoat35.github.io` | Included in the public bundle under redistribution permission confirmed by the Skeezers operator. The upstream repository itself has no declared license. |
-| Terrarium / Terraria WASM | `MercuryWorkshop/terraria-wasm` release | Redistribution permission was confirmed by the Skeezers operator, but the files remain local because the 95 MiB runtime exceeds Cloudflare Pages' 25 MiB per-asset limit. |
 
 Skeezers does not claim ownership of any third-party game, artwork, trademark, or catalog entry.

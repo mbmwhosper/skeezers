@@ -15,8 +15,3 @@
 
 /*.css
   Cache-Control: public, max-age=3600
-
-/games/terraria/*
-  Cross-Origin-Embedder-Policy: require-corp
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Resource-Policy: same-origin

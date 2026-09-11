@@ -42,7 +42,6 @@ function launch(game) {
   document.querySelector('#player-source').textContent = game.source;
   document.querySelector('#open-direct').href = target;
   const sandbox = ['allow-scripts', 'allow-forms', 'allow-modals', 'allow-pointer-lock', 'allow-popups', 'allow-downloads'];
-  if (game.id === 'terraria-wasm') sandbox.push('allow-same-origin');
   frame.setAttribute('sandbox', sandbox.join(' '));
   frame.src = target;
   dialog.showModal();

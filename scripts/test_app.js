@@ -118,14 +118,6 @@ setImmediate(() => {
     () => context.gameURL({ id: 'unsafe', local: false, url: 'javascript:alert(1)' }),
     /Unsafe game URL/,
   );
-  context.launch({
-    id: 'terraria-wasm',
-    title: 'Terraria',
-    source: 'terraria-wasm',
-    url: 'games/terraria/index.html',
-    local: true,
-  });
-  assert.equal(elements['#game-frame'].attributes.sandbox.includes('allow-same-origin'), true);
 
   console.log(JSON.stringify({
     result: 'PASS',

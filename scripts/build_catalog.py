@@ -137,17 +137,6 @@ def leereilly_games() -> list[dict]:
 def special_games() -> list[dict]:
     return [
         {
-            "id": "terraria-wasm",
-            "title": "Terraria",
-            "description": "Terrarium: Mercury Workshop's WebAssembly port of Terraria.",
-            "category": "Adventure",
-            "tags": ["wasm", "sandbox"],
-            "source": "terraria-wasm",
-            "url": "games/terraria/index.html",
-            "image": "",
-            "local": True,
-        },
-        {
             "id": "nettleweb-library",
             "title": "NettleWeb Game Library",
             "description": "Open the game library supplied by the NettleWeb project.",
