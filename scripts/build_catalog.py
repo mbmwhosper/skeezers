@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
 VENDOR_ROOT = SITE_ROOT / "vendor"
+CURATION_PATH = VENDOR_ROOT / "curated-games.json"
 
 
 def slug(value: str) -> str:
@@ -17,7 +18,7 @@ def slug(value: str) -> str:
     return value or "game"
 
 
-def gogoat_games() -> list[dict]:
+def gogoat_games(approved: dict[str, dict]) -> list[dict]:
     root = SITE_ROOT / "games" / "gogoat"
     ignored = {"index.html", "Home.html"}
     games = []
@@ -25,19 +26,29 @@ def gogoat_games() -> list[dict]:
         if page.name in ignored:
             continue
         title = page.stem.strip()
-        games.append(
-            {
-                "id": f"gogoat-{slug(title)}",
-                "title": title,
-                "description": f"Game page from gogoat35.github.io.",
-                "category": "Games",
-                "tags": [],
-                "source": "gogoat35",
-                "url": f"games/gogoat/{quote(page.name)}",
-                "image": "",
-                "local": True,
-            }
-        )
+        game_id = f"gogoat-{slug(title)}"
+        item = approved.get(game_id)
+        if item is None:
+            continue
+        local = item["verification"] == "self-contained-local-review"
+        game = {
+            "id": game_id,
+            "title": title,
+            "description": (
+                "Self-contained game page recovered from gogoat35."
+                if local
+                else "Curated game originally listed by gogoat35."
+            ),
+            "category": "Games",
+            "tags": [],
+            "source": "gogoat35",
+            "url": f"games/gogoat/{quote(page.name)}" if local else item["url"],
+            "image": "",
+            "local": local,
+        }
+        if not local:
+            game["embed"] = True
+        games.append(game)
     return games
 
 
@@ -68,6 +79,7 @@ def interstellar_games() -> list[dict]:
                 "url": target,
                 "image": image,
                 "local": False,
+                "embed": True,
             }
         )
     return games
@@ -151,13 +163,21 @@ def special_games() -> list[dict]:
 
 
 def main() -> None:
-    games = (
-        special_games()
-        + gogoat_games()
-        + interstellar_games()
-        + radon_games()
-        + leereilly_games()
-    )
+    curation = json.loads(CURATION_PATH.read_text())
+    approved = {item["id"]: item for item in curation["games"]}
+    candidates = gogoat_games(approved) + interstellar_games()
+    curated = []
+    for game in candidates:
+        item = approved.get(game["id"])
+        if item is None:
+            continue
+        if item["source"] != game["source"] or item["url"] != game["url"]:
+            raise ValueError(f"curated game drifted: {game['id']}")
+        curated.append(game)
+    missing = sorted(set(approved) - {game["id"] for game in curated})
+    if missing:
+        raise ValueError(f"curated games missing from sources: {missing}")
+    games = special_games() + curated + radon_games() + leereilly_games()
     output = SITE_ROOT / "catalog.json"
     output.write_text(json.dumps(games, indent=2, ensure_ascii=False) + "\n")
     counts: dict[str, int] = {}

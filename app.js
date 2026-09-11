@@ -18,7 +18,7 @@ function initials(title) {
 function gameURL(game) {
   const target = new URL(game.url, location.href);
   if (game.local && target.origin === location.origin) return target.href;
-  if (!game.local && ['http:', 'https:'].includes(target.protocol)) return target.href;
+  if (!game.local && target.origin !== location.origin && ['http:', 'https:'].includes(target.protocol)) return target.href;
   throw new Error(`Unsafe game URL for ${game.id}`);
 }
 
@@ -30,7 +30,7 @@ function imageURL(value) {
 
 function launch(game) {
   const target = gameURL(game);
-  if (!game.local) {
+  if (!game.local && !game.embed) {
     const link = document.createElement('a');
     link.href = target;
     link.target = '_blank';
@@ -41,7 +41,9 @@ function launch(game) {
   document.querySelector('#player-title').textContent = game.title;
   document.querySelector('#player-source').textContent = game.source;
   document.querySelector('#open-direct').href = target;
-  const sandbox = ['allow-scripts', 'allow-forms', 'allow-modals', 'allow-pointer-lock', 'allow-popups', 'allow-downloads'];
+  const sandbox = ['allow-scripts', 'allow-forms', 'allow-pointer-lock'];
+  if (game.local) sandbox.push('allow-modals', 'allow-popups', 'allow-downloads');
+  else sandbox.push('allow-same-origin');
   frame.setAttribute('sandbox', sandbox.join(' '));
   frame.src = target;
   dialog.showModal();

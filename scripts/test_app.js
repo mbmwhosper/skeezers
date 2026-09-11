@@ -108,6 +108,22 @@ setImmediate(() => {
   assert.equal(createdLinks[0].clicked, true);
   assert.equal(elements['#player'].opened, undefined);
 
+  context.launch({
+    id: 'interstellar-embedded',
+    title: 'Embedded game',
+    source: 'Interstellar',
+    url: 'https://example.com/embedded-game',
+    local: false,
+    embed: true,
+  });
+  assert.equal(createdLinks.length, 1);
+  assert.equal(elements['#player'].opened, true);
+  assert.equal(elements['#game-frame'].src, 'https://example.com/embedded-game');
+  assert.equal(elements['#game-frame'].attributes.sandbox.includes('allow-same-origin'), true);
+  assert.equal(elements['#game-frame'].attributes.sandbox.includes('allow-popups'), false);
+  assert.equal(elements['#game-frame'].attributes.sandbox.includes('allow-downloads'), false);
+  assert.equal(elements['#game-frame'].attributes.sandbox.includes('allow-modals'), false);
+
   const localCard = elements['#game-grid'].children[0].children[0];
   localCard.parts['.game-launch'].click();
   assert.equal(elements['#player'].opened, true);
@@ -116,6 +132,10 @@ setImmediate(() => {
 
   assert.throws(
     () => context.gameURL({ id: 'unsafe', local: false, url: 'javascript:alert(1)' }),
+    /Unsafe game URL/,
+  );
+  assert.throws(
+    () => context.gameURL({ id: 'same-origin-remote', local: false, url: 'http://localhost/remote.html' }),
     /Unsafe game URL/,
   );
 

@@ -14,6 +14,8 @@ from urllib.parse import unquote, urlsplit
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
 DIST_ROOT = SITE_ROOT / "dist-cloudflare"
+CURATION_PATH = SITE_ROOT / "vendor" / "curated-games.json"
+DEAD_GADGET_HOST_SUFFIXES = ("-opensocial.googleusercontent.com", "-a-sites-opensocial.googleusercontent.com")
 MAX_CLOUDFLARE_ASSET_BYTES = 25 * 1024 * 1024
 REQUIRED_GAME_FIELDS = {
     "id",
@@ -82,6 +84,21 @@ def verify_html_references(root: Path) -> int:
 
 
 def main() -> None:
+    curation = json.loads(CURATION_PATH.read_text())
+    curated_ids = {item["id"] for item in curation["games"]}
+    require(len(curated_ids) == len(curation["games"]), "duplicate IDs in curation manifest")
+    require(
+        all(item["source"] in {"Interstellar", "gogoat35"} for item in curation["games"]),
+        "unsupported source in curation manifest",
+    )
+    require(
+        all(
+            item["verification"]
+            in {"network-content-and-frame-policy", "network-content-identity-and-frame-policy", "self-contained-local-review"}
+            for item in curation["games"]
+        ),
+        "unsupported verification method in curation manifest",
+    )
     node = shutil.which("node")
     node_checked = node is not None and os.access(node, os.X_OK)
     if node is not None and node_checked:
@@ -89,13 +106,68 @@ def main() -> None:
         subprocess.run([node, "--check", "sw.js"], cwd=SITE_ROOT, check=True)
     subprocess.run(["python3", "-m", "py_compile", "scripts/build_catalog.py"], cwd=SITE_ROOT, check=True)
     subprocess.run(["python3", "-m", "py_compile", "scripts/build_cloudflare.py"], cwd=SITE_ROOT, check=True)
+    subprocess.run(["python3", "-m", "py_compile", "scripts/extract_gogoat.py"], cwd=SITE_ROOT, check=True)
+    subprocess.run(["python3", "-m", "py_compile", "scripts/probe_curated.py"], cwd=SITE_ROOT, check=True)
+    subprocess.run(["python3", "-m", "py_compile", "scripts/test_probe.py"], cwd=SITE_ROOT, check=True)
     subprocess.run(["python3", "scripts/build_catalog.py"], cwd=SITE_ROOT, check=True)
     subprocess.run(["python3", "scripts/build_cloudflare.py"], cwd=SITE_ROOT, check=True)
 
-    source_games = verify_catalog(SITE_ROOT, expected_total=802)
-    dist_games = verify_catalog(DIST_ROOT, expected_total=802)
-    require(sum(game["local"] for game in source_games) == 57, "source local-game count")
-    require(sum(game["local"] for game in dist_games) == 57, "dist local-game count")
+    expected_total = 410 + len(curated_ids)
+    source_games = verify_catalog(SITE_ROOT, expected_total=expected_total)
+    dist_games = verify_catalog(DIST_ROOT, expected_total=expected_total)
+    curated_source_games = [game for game in source_games if game["source"] in {"Interstellar", "gogoat35"}]
+    require({game["id"] for game in curated_source_games} == curated_ids, "catalog does not match curation manifest")
+    require(
+        all(game.get("embed") is True for game in source_games if game["source"] == "Interstellar"),
+        "Interstellar games must open in the embedded player",
+    )
+    gogoat_games = [game for game in source_games if game["source"] == "gogoat35"]
+    manifest_gogoat = [item for item in curation["games"] if item["source"] == "gogoat35"]
+    expected_local_gogoat = sum(item["verification"] == "self-contained-local-review" for item in manifest_gogoat)
+    expected_remote_gogoat = len(manifest_gogoat) - expected_local_gogoat
+    require(sum(not game["local"] for game in gogoat_games) == expected_remote_gogoat, "gogoat direct-game count")
+    require(
+        all(game.get("embed") is True for game in gogoat_games if not game["local"]),
+        "remote gogoat games must open in the embedded player",
+    )
+    for game in (game for game in source_games if game.get("embed") and not game["local"]):
+        parsed = urlsplit(game["url"])
+        require(parsed.scheme == "https", f"embedded game is not HTTPS: {game['id']}")
+        require(parsed.hostname not in {"skeezers.org", "www.skeezers.org"}, f"remote embed is same-origin: {game['id']}")
+        if game["source"] == "gogoat35":
+            require(
+                not (parsed.hostname or "").endswith(DEAD_GADGET_HOST_SUFFIXES),
+                f"dead Google gadget endpoint remains: {game['id']}",
+            )
+    require(sum(game["local"] for game in source_games) == expected_local_gogoat, "source local-game count")
+    require(sum(game["local"] for game in dist_games) == expected_local_gogoat, "dist local-game count")
+    expected_bundled_gogoat = {
+        Path(unquote(urlsplit(game["url"]).path)).name
+        for game in source_games
+        if game["source"] == "gogoat35" and game["local"]
+    }
+    actual_bundled_gogoat = {path.name for path in (DIST_ROOT / "games" / "gogoat").glob("*.html")}
+    require(actual_bundled_gogoat == expected_bundled_gogoat, "quarantined gogoat pages leaked into bundle")
+    for game in source_games:
+        if game["source"] != "gogoat35":
+            continue
+        expected_description = (
+            "Self-contained game page recovered from gogoat35."
+            if game["local"]
+            else "Curated game originally listed by gogoat35."
+        )
+        require(game["description"] == expected_description, f"misleading gogoat provenance: {game['id']}")
+        if not game["local"]:
+            continue
+        page = (SITE_ROOT / unquote(urlsplit(game["url"]).path)).read_text(errors="replace")
+        require("data-code=" not in page, f"gogoat wrapper was not extracted: {game['id']}")
+        require("_docs_flag_initialData" not in page, f"Google Sites shell remains: {game['id']}")
+        built_page = DIST_ROOT / unquote(urlsplit(game["url"]).path)
+        source_page = SITE_ROOT / unquote(urlsplit(game["url"]).path)
+        require(
+            built_page.read_bytes() == source_page.read_bytes(),
+            f"built gogoat page drifted: {game['id']}",
+        )
 
     files = [path for path in DIST_ROOT.rglob("*") if path.is_file()]
     require(bool(files), "Cloudflare bundle is empty")
@@ -111,6 +183,10 @@ def main() -> None:
     require("/index.html\n  Content-Security-Policy:" in headers, "launcher CSP missing")
     launcher = (SITE_ROOT / "index.html").read_text()
     require('sandbox="allow-scripts ' in launcher, "game iframe sandbox missing")
+    require(
+        "Some game hosts block embedded playback" in launcher,
+        "embedded-game fallback guidance missing",
+    )
 
     checked_refs = verify_html_references(SITE_ROOT)
     source_counts = Counter(game["source"] for game in source_games)

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = SITE_ROOT / "dist-cloudflare"
@@ -30,10 +31,18 @@ def main() -> None:
     for name in ROOT_FILES:
         shutil.copy2(SITE_ROOT / name, OUTPUT / name)
     shutil.copytree(SITE_ROOT / "assets", OUTPUT / "assets")
-    shutil.copytree(SITE_ROOT / "games" / "gogoat", OUTPUT / "games" / "gogoat")
     shutil.copytree(SITE_ROOT / "third_party", OUTPUT / "third_party")
 
     catalog = json.loads((SITE_ROOT / "catalog.json").read_text())
+    gogoat_output = OUTPUT / "games" / "gogoat"
+    gogoat_output.mkdir(parents=True)
+    for game in catalog:
+        if game["source"] != "gogoat35" or not game["local"]:
+            continue
+        relative = Path(unquote(urlsplit(game["url"]).path))
+        if relative.parent != Path("games/gogoat"):
+            raise ValueError(f"unsafe local gogoat path: {game['id']}")
+        shutil.copy2(SITE_ROOT / relative, gogoat_output / relative.name)
     (OUTPUT / "catalog.json").write_text(
         json.dumps(catalog, indent=2, ensure_ascii=False) + "\n"
     )
